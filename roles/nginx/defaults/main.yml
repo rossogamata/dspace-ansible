@@ -1,0 +1,3 @@
+---
+nginx_backend_port: "{{ dspace_backend_port | default(8080) }}"
+nginx_frontend_port: "{{ dspace_ui_port | default(4000) }}"

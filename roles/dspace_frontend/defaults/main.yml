@@ -1,0 +1,5 @@
+---
+dspace_angular_tarball_url: "https://github.com/DSpace/dspace-angular/releases/download/dspace-{{ dspace_angular_version }}/dspace-angular-{{ dspace_angular_version }}.tar.gz"
+dspace_angular_tarball_dest: "{{ dspace_build_dir }}/dspace-angular-{{ dspace_angular_version }}.tar.gz"
+dspace_angular_src_dir: "{{ dspace_build_dir }}/dspace-angular-{{ dspace_angular_version }}"
+dspace_frontend_system_user: "dspace"

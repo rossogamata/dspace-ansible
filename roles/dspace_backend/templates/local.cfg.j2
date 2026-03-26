@@ -1,0 +1,79 @@
+# local.cfg — managed by Ansible. Do not edit manually.
+# This file overrides settings from dspace.cfg and all modules/*.cfg files.
+# See: dspace/config/local.cfg.EXAMPLE in the DSpace source tree.
+
+##########################
+# SERVER CONFIGURATION   #
+##########################
+
+dspace.dir = {{ dspace_dir }}
+
+# Public URL of the DSpace REST API — no trailing slash
+dspace.server.url = {{ dspace_server_url }}
+
+# URL used by Angular SSR to reach the backend internally
+dspace.server.ssr.url = {{ dspace_server_ssr_url }}
+
+# Public URL of the DSpace Angular frontend — no trailing slash
+dspace.ui.url = {{ dspace_ui_url }}
+
+# Display name of the repository
+dspace.name = {{ dspace_name }}
+
+##########################
+# DATABASE CONFIGURATION #
+##########################
+
+db.url      = {{ db_url }}
+db.username = {{ db_username }}
+db.password = {{ db_password }}
+
+##########################
+# SOLR CONFIGURATION     #
+##########################
+
+solr.server = {{ solr_url }}
+
+#######################
+# EMAIL CONFIGURATION #
+#######################
+
+{% if mail_server %}
+mail.server          = {{ mail_server }}
+mail.server.port     = {{ mail_server_port }}
+{% if mail_server_username %}
+mail.server.username = {{ mail_server_username }}
+mail.server.password = {{ mail_server_password }}
+{% endif %}
+{% endif %}
+
+mail.from.address = {{ mail_from_address }}
+mail.admin        = {{ mail_admin }}
+alert.recipient   = ${mail.admin}
+
+########################
+# HANDLE CONFIGURATION #
+########################
+
+handle.canonical.prefix = https://hdl.handle.net/
+handle.prefix = {{ handle_prefix }}
+
+#####################
+# REST API / CORS   #
+#####################
+
+# Allowed CORS origins — must exactly match the frontend URL (no wildcard)
+rest.cors.allowed-origins = ${dspace.ui.url}
+
+#################################################
+# SPRING BOOT — upload size limits              #
+#################################################
+
+spring.servlet.multipart.max-file-size    = {{ max_upload_size }}
+spring.servlet.multipart.max-request-size = {{ max_upload_size }}
+
+########################
+#  LDN INBOX SETTINGS  #
+########################
+
+ldn.enabled = true

@@ -1,0 +1,15 @@
+# Managed by Ansible — do not edit manually.
+# Angular frontend configuration — maps to environment variables with DSPACE_ prefix.
+# See: https://github.com/DSpace/dspace-angular/blob/main/config/config.example.yml
+
+ui:
+  ssl: {{ 'true' if dspace_server_url.startswith('https') else 'false' }}
+  host: {{ nginx_frontend_fqdn }}
+  port: 443
+  nameSpace: /
+
+rest:
+  ssl: {{ 'true' if dspace_server_url.startswith('https') else 'false' }}
+  host: {{ nginx_backend_fqdn }}
+  port: 443
+  nameSpace: /server

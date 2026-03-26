@@ -1,0 +1,119 @@
+---
+# ── Download dspace-angular source release ────────────────────────────────────
+
+- name: Check if Angular UI is already deployed
+  ansible.builtin.stat:
+    path: "{{ dspace_ui_dir }}/dist/server/main.js"
+  register: dspace_ui_check
+
+- name: Download dspace-angular {{ dspace_angular_version }} tarball
+  ansible.builtin.get_url:
+    url: "{{ dspace_angular_tarball_url }}"
+    dest: "{{ dspace_angular_tarball_dest }}"
+    mode: "0644"
+    timeout: 300
+  become_user: "{{ dspace_frontend_system_user }}"
+  when: not dspace_ui_check.stat.exists or dspace_force_reinstall
+
+- name: Extract dspace-angular tarball
+  ansible.builtin.unarchive:
+    src: "{{ dspace_angular_tarball_dest }}"
+    dest: "{{ dspace_build_dir }}"
+    remote_src: true
+    creates: "{{ dspace_angular_src_dir }}"
+  become_user: "{{ dspace_frontend_system_user }}"
+  when: not dspace_ui_check.stat.exists or dspace_force_reinstall
+
+# ── npm install ───────────────────────────────────────────────────────────────
+
+- name: Run npm install in dspace-angular source
+  community.general.npm:
+    path: "{{ dspace_angular_src_dir }}"
+    state: present
+  become_user: "{{ dspace_frontend_system_user }}"
+  when: not dspace_ui_check.stat.exists or dspace_force_reinstall
+
+# ── Production build ──────────────────────────────────────────────────────────
+
+- name: Build dspace-angular for production (this can take 10–20 minutes)
+  ansible.builtin.command:
+    cmd: npm run build:prod
+    chdir: "{{ dspace_angular_src_dir }}"
+  become_user: "{{ dspace_frontend_system_user }}"
+  environment:
+    NODE_ENV: production
+  when: not dspace_ui_check.stat.exists or dspace_force_reinstall
+  async: 2400
+  poll: 30
+  changed_when: true
+
+# ── Deploy built artifacts ────────────────────────────────────────────────────
+
+- name: Create deployment directory {{ dspace_ui_dir }}
+  ansible.builtin.file:
+    path: "{{ dspace_ui_dir }}/config"
+    state: directory
+    owner: "{{ dspace_frontend_system_user }}"
+    group: "{{ dspace_frontend_system_user }}"
+    mode: "0755"
+
+- name: Sync dist/ to deployment directory
+  ansible.posix.synchronize:
+    src: "{{ dspace_angular_src_dir }}/dist/"
+    dest: "{{ dspace_ui_dir }}/dist/"
+    delete: true
+    recursive: true
+  delegate_to: "{{ inventory_hostname }}"
+  become_user: "{{ dspace_frontend_system_user }}"
+  when: not dspace_ui_check.stat.exists or dspace_force_reinstall
+  notify: Restart dspace frontend
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+
+- name: Template config.prod.yml
+  ansible.builtin.template:
+    src: config.prod.yml.j2
+    dest: "{{ dspace_ui_dir }}/config/config.prod.yml"
+    owner: "{{ dspace_frontend_system_user }}"
+    group: "{{ dspace_frontend_system_user }}"
+    mode: "0640"
+  notify: Restart dspace frontend
+
+# ── PM2 ecosystem file ────────────────────────────────────────────────────────
+
+- name: Template PM2 ecosystem file
+  ansible.builtin.template:
+    src: dspace-ui.json.j2
+    dest: "{{ dspace_ui_dir }}/dspace-ui.json"
+    owner: "{{ dspace_frontend_system_user }}"
+    group: "{{ dspace_frontend_system_user }}"
+    mode: "0644"
+  notify: Restart dspace frontend
+
+# ── Start the frontend with PM2 ───────────────────────────────────────────────
+
+- name: Start dspace-ui with PM2
+  ansible.builtin.command:
+    cmd: pm2 start {{ dspace_ui_dir }}/dspace-ui.json
+  become_user: "{{ dspace_frontend_system_user }}"
+  register: pm2_start_result
+  changed_when: "'already launched' not in pm2_start_result.stdout"
+  failed_when:
+    - pm2_start_result.rc != 0
+    - "'already launched' not in pm2_start_result.stdout"
+
+- name: Save PM2 process list (survives reboots)
+  ansible.builtin.command: pm2 save
+  become_user: "{{ dspace_frontend_system_user }}"
+  changed_when: true
+
+- name: Register PM2 startup hook with systemd
+  ansible.builtin.command:
+    cmd: pm2 startup systemd -u {{ dspace_frontend_system_user }} --hp /home/{{ dspace_frontend_system_user }}
+  register: pm2_startup
+  changed_when: "'systemctl' in pm2_startup.stdout"
+
+- name: Apply PM2 startup command (if provided)
+  ansible.builtin.command: "{{ pm2_startup.stdout | regex_search('sudo.*') }}"
+  when: pm2_startup.stdout | regex_search('sudo.*')
+  changed_when: true

@@ -1,0 +1,50 @@
+---
+- name: Install PostgreSQL {{ postgresql_version }} and contrib
+  ansible.builtin.apt:
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-contrib-{{ postgresql_version }}"
+    state: present
+
+- name: Ensure PostgreSQL is started and enabled
+  ansible.builtin.systemd:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Set listen_addresses = 'localhost' in postgresql.conf
+  ansible.builtin.lineinfile:
+    path: "{{ postgresql_conf_dir }}/postgresql.conf"
+    regexp: '^#?listen_addresses\s*='
+    line: "listen_addresses = 'localhost'"
+    backup: true
+  notify: Restart postgresql
+
+- name: Add DSpace pg_hba.conf entry
+  ansible.builtin.blockinfile:
+    path: "{{ postgresql_conf_dir }}/pg_hba.conf"
+    marker: "# {mark} ANSIBLE MANAGED — DSpace"
+    insertbefore: "^# IPv4 local connections:"
+    block: |
+      host    {{ db_name }}    {{ db_username }}    127.0.0.1/32    md5
+    backup: true
+  notify: Reload postgresql
+
+- name: Flush handlers (apply pg_hba before creating objects)
+  ansible.builtin.meta: flush_handlers
+
+- name: Create DSpace database user
+  community.postgresql.postgresql_user:
+    name: "{{ db_username }}"
+    password: "{{ db_password }}"
+    role_attr_flags: NOSUPERUSER,NOCREATEROLE,NOCREATEDB
+    state: present
+  become_user: postgres
+
+- name: Create DSpace database
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_username }}"
+    encoding: UTF-8
+    state: present
+  become_user: postgres

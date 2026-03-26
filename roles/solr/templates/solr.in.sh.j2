@@ -1,0 +1,16 @@
+# Managed by Ansible — do not edit manually
+# /etc/default/solr.in.sh
+
+# DSpace requires solr.config.lib.enabled=true (Solr 9.8+)
+# so that DSpace solrconfig.xml files can use <lib> directives.
+SOLR_OPTS="$SOLR_OPTS -Dsolr.config.lib.enabled=true"
+
+# Heap size — adjust to available RAM (min 512m, recommended 2g+ for production)
+SOLR_HEAP="512m"
+
+# Data directory (managed by install_solr_service.sh)
+SOLR_HOME="{{ solr_data_dir }}"
+
+# Log directory
+LOG4J_PROPS="/var/solr/log4j2.xml"
+SOLR_LOGS_DIR="/var/solr/logs"

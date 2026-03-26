@@ -1,0 +1,19 @@
+{
+  "apps": [
+    {
+      "name": "dspace-ui",
+      "cwd": "{{ dspace_ui_dir }}",
+      "script": "dist/server/main.js",
+      "instances": "{{ dspace_ui_pm2_instances }}",
+      "exec_mode": "cluster",
+      "env": {
+        "NODE_ENV": "production",
+        "DSPACE_UI_PORT": "{{ dspace_ui_port }}"
+      },
+      "log_date_format": "YYYY-MM-DD HH:mm:ss",
+      "error_file": "/var/log/dspace/dspace-ui-error.log",
+      "out_file": "/var/log/dspace/dspace-ui-out.log",
+      "merge_logs": true
+    }
+  ]
+}

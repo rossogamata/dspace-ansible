@@ -1,0 +1,5 @@
+---
+- name: Restart solr
+  ansible.builtin.systemd:
+    name: solr
+    state: restarted

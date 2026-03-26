@@ -1,0 +1,4 @@
+---
+# postgresql_version is defined in group_vars/all.yml (default: "16")
+# Paths derived from version
+postgresql_conf_dir: "/etc/postgresql/{{ postgresql_version }}/main"

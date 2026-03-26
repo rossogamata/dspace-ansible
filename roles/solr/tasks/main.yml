@@ -1,0 +1,70 @@
+---
+# ── Download & extract ────────────────────────────────────────────────────────
+
+- name: Check if Solr {{ solr_version }} is already installed
+  ansible.builtin.stat:
+    path: "/opt/solr-{{ solr_version }}"
+  register: solr_install_check
+
+- name: Download Solr {{ solr_version }} tarball
+  ansible.builtin.get_url:
+    url: "{{ solr_tarball_url }}"
+    dest: "{{ solr_tarball_dest }}"
+    mode: "0644"
+    timeout: 120
+  when: not solr_install_check.stat.exists
+
+- name: Extract Solr tarball to /tmp
+  ansible.builtin.unarchive:
+    src: "{{ solr_tarball_dest }}"
+    dest: /tmp
+    remote_src: true
+    creates: "{{ solr_extracted_dir }}"
+  when: not solr_install_check.stat.exists
+
+# ── Install as system service ─────────────────────────────────────────────────
+# install_solr_service.sh creates the 'solr' OS user, installs to /opt/solr-X.Y.Z,
+# symlinks /opt/solr, creates /var/solr for data, and registers a systemd service.
+
+- name: Run Solr install_solr_service.sh
+  ansible.builtin.command: >
+    bash {{ solr_service_script }} {{ solr_tarball_dest }}
+    -i {{ solr_install_dir }}
+    -d {{ solr_data_dir }}
+    -u solr
+    -s solr
+    -p 8983
+    -n
+  args:
+    creates: "/opt/solr-{{ solr_version }}/bin/solr"
+  when: not solr_install_check.stat.exists
+
+# ── Configure SOLR_OPTS ───────────────────────────────────────────────────────
+# Solr 9.8+ requires solr.config.lib.enabled=true to use <lib> tags in
+# DSpace's solrconfig.xml files.
+
+- name: Template /etc/default/solr.in.sh with required SOLR_OPTS
+  ansible.builtin.template:
+    src: solr.in.sh.j2
+    dest: /etc/default/solr.in.sh
+    owner: solr
+    group: solr
+    mode: "0640"
+  notify: Restart solr
+
+- name: Ensure Solr is started and enabled
+  ansible.builtin.systemd:
+    name: solr
+    state: started
+    enabled: true
+
+- name: Wait for Solr to be ready (port 8983)
+  ansible.builtin.wait_for:
+    host: localhost
+    port: 8983
+    delay: 5
+    timeout: 60
+
+# ── Solr cores — deferred to dspace_backend role ─────────────────────────────
+# Cores are copied from {{ dspace_dir }}/solr/ AFTER ant fresh_install.
+# The actual core creation happens in the dspace_backend role.

@@ -1,0 +1,38 @@
+---
+# DSpace 9.x single-host installation playbook for Ubuntu 24.04
+# Applies all roles in order on the 'dspace' host group.
+#
+# Usage:
+#   ansible-playbook site.yml
+#   ansible-playbook site.yml --tags postgresql        # run one role only
+#   ansible-playbook site.yml -e dspace_force_reinstall=true  # force rebuild
+#
+# First-time setup:
+#   1. Copy inventory/hosts.yml.example to inventory/hosts.yml and edit it
+#   2. Copy group_vars/vault.yml.example to group_vars/vault.yml and set passwords
+#   3. Encrypt: ansible-vault encrypt group_vars/vault.yml
+#   4. Edit group_vars/all.yml (URLs, site name, admin email, etc.)
+#   5. Run: ansible-playbook site.yml --ask-vault-pass
+
+- name: Install DSpace 9.x on Ubuntu 24.04 (single host)
+  hosts: dspace
+  become: true
+
+  roles:
+    - role: common
+      tags: common
+
+    - role: postgresql
+      tags: postgresql
+
+    - role: solr
+      tags: solr
+
+    - role: dspace_backend
+      tags: dspace_backend, backend
+
+    - role: dspace_frontend
+      tags: dspace_frontend, frontend
+
+    - role: nginx
+      tags: nginx

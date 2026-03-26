@@ -1,0 +1,60 @@
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Create /var/log/dspace directory for PM2 logs
+  ansible.builtin.file:
+    path: /var/log/dspace
+    state: directory
+    owner: dspace
+    group: dspace
+    mode: "0755"
+
+- name: Remove default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Template DSpace Nginx site config
+  ansible.builtin.template:
+    src: dspace.conf.j2
+    dest: /etc/nginx/sites-available/dspace.conf
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable DSpace Nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/dspace.conf
+    dest: /etc/nginx/sites-enabled/dspace.conf
+    state: link
+  notify: Reload nginx
+
+# ── Let's Encrypt (optional) ──────────────────────────────────────────────────
+
+- name: Obtain Let's Encrypt certificate for backend
+  ansible.builtin.command: >
+    certbot --nginx
+    -d {{ nginx_backend_fqdn }}
+    -d {{ nginx_frontend_fqdn }}
+    --non-interactive
+    --agree-tos
+    --email {{ nginx_letsencrypt_email }}
+    --redirect
+  register: certbot_result
+  changed_when: "'Certificate not yet due for renewal' not in certbot_result.stdout"
+  when: nginx_use_letsencrypt
+  notify: Reload nginx
+
+# ── Ensure Nginx is running ───────────────────────────────────────────────────
+
+- name: Ensure Nginx is started and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true

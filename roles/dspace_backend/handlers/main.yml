@@ -1,0 +1,16 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart dspace backend
+  ansible.builtin.systemd:
+    name: dspace-backend
+    state: restarted
+  # Service might not exist yet on first run — ignore that error
+  failed_when: false
+
+- name: Restart solr
+  ansible.builtin.systemd:
+    name: solr
+    state: restarted

@@ -1,0 +1,178 @@
+---
+# ── Installation directory ────────────────────────────────────────────────────
+
+- name: Create DSpace installation directory {{ dspace_dir }}
+  ansible.builtin.file:
+    path: "{{ dspace_dir }}"
+    state: directory
+    owner: "{{ dspace_system_user }}"
+    group: "{{ dspace_system_group }}"
+    mode: "0755"
+
+# ── Download DSpace source release from GitHub ────────────────────────────────
+
+- name: Download DSpace {{ dspace_version }} source tarball
+  ansible.builtin.get_url:
+    url: "{{ dspace_src_tarball_url }}"
+    dest: "{{ dspace_src_tarball_dest }}"
+    mode: "0644"
+    timeout: 300
+  become_user: "{{ dspace_system_user }}"
+
+- name: Extract DSpace source tarball
+  ansible.builtin.unarchive:
+    src: "{{ dspace_src_tarball_dest }}"
+    dest: "{{ dspace_build_dir }}"
+    remote_src: true
+    creates: "{{ dspace_src_dir }}"
+  become_user: "{{ dspace_system_user }}"
+
+# ── local.cfg ─────────────────────────────────────────────────────────────────
+
+- name: Template local.cfg into source tree
+  ansible.builtin.template:
+    src: local.cfg.j2
+    dest: "{{ dspace_src_dir }}/dspace/config/local.cfg"
+    owner: "{{ dspace_system_user }}"
+    group: "{{ dspace_system_group }}"
+    mode: "0640"
+  # Always re-template so config changes are picked up on re-runs
+  notify: Restart dspace backend
+
+# ── Maven build ───────────────────────────────────────────────────────────────
+
+- name: Check if DSpace installer already exists
+  ansible.builtin.stat:
+    path: "{{ dspace_dir }}/webapps/server-boot.jar"
+  register: dspace_jar_check
+
+- name: Build DSpace with Maven (this can take 15–30 minutes)
+  ansible.builtin.command:
+    cmd: "mvn {{ maven_opts }}"
+    chdir: "{{ dspace_src_dir }}"
+  become_user: "{{ dspace_system_user }}"
+  when: not dspace_jar_check.stat.exists or dspace_force_reinstall
+  async: 3600
+  poll: 30
+  changed_when: true
+
+# ── Ant install ───────────────────────────────────────────────────────────────
+
+- name: Run ant fresh_install (first install)
+  ansible.builtin.command:
+    cmd: ant fresh_install
+    chdir: "{{ dspace_installer_dir }}"
+  become_user: "{{ dspace_system_user }}"
+  when: not dspace_jar_check.stat.exists
+  changed_when: true
+  notify: Restart dspace backend
+
+- name: Run ant update (re-install / upgrade)
+  ansible.builtin.command:
+    cmd: ant update
+    chdir: "{{ dspace_installer_dir }}"
+  become_user: "{{ dspace_system_user }}"
+  when: dspace_jar_check.stat.exists and dspace_force_reinstall
+  changed_when: true
+  notify: Restart dspace backend
+
+# ── Database migration ────────────────────────────────────────────────────────
+
+- name: Run database migrate
+  ansible.builtin.command:
+    cmd: "{{ dspace_dir }}/bin/dspace database migrate"
+  become_user: "{{ dspace_system_user }}"
+  changed_when: true
+
+# ── Solr cores: copy configsets then create cores ────────────────────────────
+
+- name: Ensure Solr configsets directory exists
+  ansible.builtin.file:
+    path: "{{ solr_configsets_dir }}"
+    state: directory
+    owner: solr
+    group: solr
+    mode: "0755"
+
+- name: Copy DSpace Solr configsets to Solr
+  ansible.builtin.copy:
+    src: "{{ dspace_dir }}/solr/{{ item }}/"
+    dest: "{{ solr_configsets_dir }}/{{ item }}/"
+    remote_src: true
+    owner: solr
+    group: solr
+  loop: "{{ solr_cores }}"
+  notify: Restart solr
+
+- name: Flush handlers (restart Solr before creating cores)
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for Solr to be ready after restart
+  ansible.builtin.wait_for:
+    host: localhost
+    port: 8983
+    delay: 5
+    timeout: 90
+
+- name: Check which Solr cores already exist
+  ansible.builtin.uri:
+    url: "http://localhost:8983/solr/admin/cores?action=STATUS&core={{ item }}"
+    return_content: true
+  register: solr_core_status
+  loop: "{{ solr_cores }}"
+
+- name: Create missing Solr cores
+  ansible.builtin.command:
+    cmd: >
+      /opt/solr/bin/solr create
+      -c {{ item.item }}
+      -d {{ solr_configsets_dir }}/{{ item.item }}
+  become_user: solr
+  loop: "{{ solr_core_status.results }}"
+  when: "(item.json.status[item.item] | default({})) == {}"
+  changed_when: true
+
+# ── DSpace administrator account ──────────────────────────────────────────────
+
+- name: Check if DSpace admin account already exists
+  ansible.builtin.command:
+    cmd: >
+      psql -U {{ db_username }} -h 127.0.0.1 -d {{ db_name }} -tAc
+      "SELECT COUNT(*) FROM eperson WHERE email='{{ dspace_admin_email }}'"
+  become_user: "{{ dspace_system_user }}"
+  register: admin_count
+  changed_when: false
+  environment:
+    PGPASSWORD: "{{ db_password }}"
+
+- name: Create DSpace administrator account
+  ansible.builtin.command:
+    cmd: >
+      {{ dspace_dir }}/bin/dspace create-administrator
+      -e {{ dspace_admin_email }}
+      -f {{ dspace_admin_firstname }}
+      -l {{ dspace_admin_lastname }}
+      -p {{ dspace_admin_password }}
+      -c en
+  become_user: "{{ dspace_system_user }}"
+  when: admin_count.stdout | trim == "0"
+  changed_when: true
+  no_log: true   # hide password from log output
+
+# ── systemd service ───────────────────────────────────────────────────────────
+
+- name: Install DSpace backend systemd service
+  ansible.builtin.template:
+    src: dspace-backend.service.j2
+    dest: /etc/systemd/system/dspace-backend.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart dspace backend
+
+- name: Enable and start DSpace backend service
+  ansible.builtin.systemd:
+    name: dspace-backend
+    state: started
+    enabled: true
+    daemon_reload: true

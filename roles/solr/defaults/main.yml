@@ -1,0 +1,7 @@
+---
+# solr_version defined in group_vars/all.yml (default: "9.8.0")
+solr_tarball_url: "https://archive.apache.org/dist/solr/solr/{{ solr_version }}/solr-{{ solr_version }}.tgz"
+solr_tarball_dest: "/tmp/solr-{{ solr_version }}.tgz"
+solr_extracted_dir: "/tmp/solr-{{ solr_version }}"
+solr_service_script: "{{ solr_extracted_dir }}/bin/install_solr_service.sh"
+solr_configsets_dir: "/opt/solr/server/solr/configsets"

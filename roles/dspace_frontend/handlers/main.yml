@@ -1,0 +1,6 @@
+---
+- name: Restart dspace frontend
+  ansible.builtin.command: pm2 restart dspace-ui
+  become_user: "{{ dspace_frontend_system_user }}"
+  failed_when: false   # PM2 app may not exist yet on first run
+  changed_when: true

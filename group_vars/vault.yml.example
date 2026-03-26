@@ -1,0 +1,8 @@
+# Copy to vault.yml and encrypt:
+#   cp group_vars/vault.yml.example group_vars/vault.yml
+#   ansible-vault encrypt group_vars/vault.yml
+#
+# To edit later: ansible-vault edit group_vars/vault.yml
+---
+vault_db_password: "CHANGE_ME_strong_db_password"
+vault_dspace_admin_password: "CHANGE_ME_strong_admin_password"

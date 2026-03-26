@@ -1,0 +1,102 @@
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# DSpace version — must match between backend and frontend
+# ─────────────────────────────────────────────────────────────────────────────
+dspace_version: "9.2"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Directory layout
+# ─────────────────────────────────────────────────────────────────────────────
+dspace_dir: "/dspace"                        # final installation directory
+dspace_build_dir: "/opt/dspace-build"        # temporary source/build area
+dspace_ui_dir: "/opt/dspace-ui"             # Angular production deployment
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Public URLs  (no trailing slash; use real FQDNs in production)
+# ─────────────────────────────────────────────────────────────────────────────
+dspace_server_url: "https://api.example.com/server"
+dspace_ui_url: "https://www.example.com"
+dspace_name: "DSpace at My University"
+
+# Internal URL the Angular SSR process uses to reach the backend
+# (can stay as localhost if both run on the same machine)
+dspace_server_ssr_url: "http://localhost:8080/server"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Administrator account  (password must come from vault)
+# ─────────────────────────────────────────────────────────────────────────────
+dspace_admin_email: "admin@example.com"
+dspace_admin_firstname: "DSpace"
+dspace_admin_lastname: "Administrator"
+dspace_admin_password: "{{ vault_dspace_admin_password }}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Installation behaviour
+# ─────────────────────────────────────────────────────────────────────────────
+# Set to true to force a full Maven rebuild + ant reinstall even if already done
+dspace_force_reinstall: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Database (PostgreSQL)
+# ─────────────────────────────────────────────────────────────────────────────
+postgresql_version: "16"          # Ubuntu 24.04 ships PG 16
+db_name: "dspace"
+db_username: "dspace"
+db_password: "{{ vault_db_password }}"
+db_url: "jdbc:postgresql://localhost:5432/{{ db_name }}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Solr
+# ─────────────────────────────────────────────────────────────────────────────
+solr_version: "9.8.0"
+solr_install_dir: "/opt"
+solr_data_dir: "/var/solr/data"
+solr_url: "http://localhost:8983/solr"
+solr_cores:
+  - search
+  - statistics
+  - oai
+  - authority
+  - qaevent
+  - suggestion
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Frontend (Angular)
+# ─────────────────────────────────────────────────────────────────────────────
+dspace_angular_version: "{{ dspace_version }}"
+dspace_ui_port: 4000
+dspace_ui_pm2_instances: "max"   # number of Node.js cluster workers
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Nginx / TLS
+# ─────────────────────────────────────────────────────────────────────────────
+nginx_backend_fqdn: "api.example.com"     # backend domain (for /server)
+nginx_frontend_fqdn: "www.example.com"   # frontend domain
+
+# Set to true to obtain a Let's Encrypt certificate automatically via certbot
+nginx_use_letsencrypt: false
+nginx_letsencrypt_email: "admin@example.com"
+
+# Used when nginx_use_letsencrypt is false (supply your own certs)
+nginx_ssl_cert: "/etc/ssl/certs/dspace.crt"
+nginx_ssl_key: "/etc/ssl/private/dspace.key"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Email (leave empty to disable)
+# ─────────────────────────────────────────────────────────────────────────────
+mail_server: ""
+mail_server_port: "25"
+mail_server_username: ""
+mail_server_password: ""
+mail_from_address: "dspace-noreply@example.com"
+mail_admin: "admin@example.com"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handle prefix (use your registered prefix or leave as dummy)
+# ─────────────────────────────────────────────────────────────────────────────
+handle_prefix: "123456789"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Upload size limits
+# ─────────────────────────────────────────────────────────────────────────────
+max_upload_size: "512MB"
