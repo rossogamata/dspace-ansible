@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # DSpace version — must match between backend and frontend
 # ─────────────────────────────────────────────────────────────────────────────
-dspace_version: "9.2"
+dspace_version: "9.1"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Directory layout
@@ -16,7 +16,7 @@ dspace_ui_dir: "/opt/dspace-ui"             # Angular production deployment
 # ─────────────────────────────────────────────────────────────────────────────
 dspace_server_url: "https://api.example.com/server"
 dspace_ui_url: "https://www.example.com"
-dspace_name: "DSpace at My University"
+dspace_name: "DSpace at MITIT"
 
 # Internal URL the Angular SSR process uses to reach the backend
 # (can stay as localhost if both run on the same machine)
@@ -28,7 +28,7 @@ dspace_server_ssr_url: "http://localhost:8080/server"
 dspace_admin_email: "admin@example.com"
 dspace_admin_firstname: "DSpace"
 dspace_admin_lastname: "Administrator"
-dspace_admin_password: "{{ vault_dspace_admin_password }}"
+dspace_admin_password: "DspaceAdminPass123"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Installation behaviour
@@ -42,7 +42,7 @@ dspace_force_reinstall: false
 postgresql_version: "16"          # Ubuntu 24.04 ships PG 16
 db_name: "dspace"
 db_username: "dspace"
-db_password: "{{ vault_db_password }}"
+db_password: "ASdnlsdfio"
 db_url: "jdbc:postgresql://localhost:5432/{{ db_name }}"
 
 # ─────────────────────────────────────────────────────────────────────────────

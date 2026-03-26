@@ -87,4 +87,7 @@ ansible-playbook -i inventory/hosts.yml site.yml --vault-password-file ~/.vault_
 
 - Added full vault-based sudo password support.
 - Added explicit docs for `ansible_become_pass` in inventory.
+- Added command examples to run playbook with `--ask-vault-pass` / `--vault-password-file`.
 - Added `--check` dry run and backend/frontend quick validation commands.
+- Changed DSpace source retrieval from tarball download to git clone (tarballs not available for recent releases).
+- Updated to DSpace 9.1.

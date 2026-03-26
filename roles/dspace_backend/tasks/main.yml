@@ -9,7 +9,7 @@
     group: "{{ dspace_system_group }}"
     mode: "0755"
 
-# ── Download DSpace source release from GitHub ────────────────────────────────
+# ── Download DSpace source from GitHub ────────────────────────────────
 
 - name: Download DSpace {{ dspace_version }} source tarball
   ansible.builtin.get_url:

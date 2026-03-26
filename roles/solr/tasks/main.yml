@@ -39,6 +39,19 @@
     creates: "/opt/solr-{{ solr_version }}/bin/solr"
   when: not solr_install_check.stat.exists
 
+# ── Create logs directory ─────────────────────────────────────────────────────
+# install_solr_service.sh creates /var/solr but not the logs subdirectory
+# that solr.in.sh expects.
+
+- name: Create Solr logs directory
+  ansible.builtin.file:
+    path: "{{ solr_data_dir }}/logs"
+    state: directory
+    owner: solr
+    group: solr
+    mode: "0750"
+  when: not solr_install_check.stat.exists
+
 # ── Configure SOLR_OPTS ───────────────────────────────────────────────────────
 # Solr 9.8+ requires solr.config.lib.enabled=true to use <lib> tags in
 # DSpace's solrconfig.xml files.

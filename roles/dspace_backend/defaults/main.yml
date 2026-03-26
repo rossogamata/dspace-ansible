@@ -1,7 +1,7 @@
 ---
-dspace_src_tarball_url: "https://github.com/DSpace/DSpace/releases/download/dspace-{{ dspace_version }}/dspace-{{ dspace_version }}-src-release.tar.gz"
-dspace_src_tarball_dest: "{{ dspace_build_dir }}/dspace-{{ dspace_version }}-src-release.tar.gz"
-dspace_src_dir: "{{ dspace_build_dir }}/dspace-{{ dspace_version }}-src-release"
+dspace_src_tarball_url: "https://github.com/DSpace/DSpace/archive/refs/tags/dspace-{{ dspace_version }}.tar.gz"
+dspace_src_tarball_dest: "{{ dspace_build_dir }}/dspace-{{ dspace_version }}.tar.gz"
+dspace_src_dir: "{{ dspace_build_dir }}/DSpace-dspace-{{ dspace_version }}"
 dspace_installer_dir: "{{ dspace_src_dir }}/dspace/target/dspace-installer"
 dspace_backend_port: 8080
 dspace_system_user: "dspace"

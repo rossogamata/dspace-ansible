@@ -70,7 +70,7 @@ sudo su - solr -c "/opt/solr/bin/solr create -c dspace -n data_driven_schema_con
 ```bash
 git clone https://github.com/DSpace/DSpace.git
 cd DSpace
-git checkout main
+git checkout dspace-9.1
 ```
 
 2. Configure DSpace: copy template and set DB/Solr:
