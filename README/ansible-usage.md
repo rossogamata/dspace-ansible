@@ -89,5 +89,13 @@ ansible-playbook -i inventory/hosts.yml site.yml --vault-password-file ~/.vault_
 - Added explicit docs for `ansible_become_pass` in inventory.
 - Added command examples to run playbook with `--ask-vault-pass` / `--vault-password-file`.
 - Added `--check` dry run and backend/frontend quick validation commands.
-- Changed DSpace source retrieval from tarball download to git clone (tarballs not available for recent releases).
-- Updated to DSpace 9.1.
+- Updated DSpace source retrieval to use GitHub archive URL:
+  `https://github.com/DSpace/DSpace/archive/refs/tags/dspace-{{ dspace_version }}.tar.gz` (fixes 404 for dspace-9.2 release artifacts).
+- Updated to DSpace 9.1/9.2 compatibility in role defaults and templates.
+- `group_vars/all.yml` now references vault secrets for:
+  - `db_password` -> `vault_db_password`
+  - `dspace_admin_password` -> `vault_dspace_admin_password`.
+- Vault vars in `group_vars/vault.yml` include:
+  - `vault_db_password`
+  - `vault_dspace_admin_password`
+  - `vault_sudo_pass`.

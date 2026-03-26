@@ -23,12 +23,12 @@ dspace_name: "DSpace at MITIT"
 dspace_server_ssr_url: "http://localhost:8080/server"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Administrator account  (password must come from vault)
+# Administrator account  (password is stored in vault)
 # ─────────────────────────────────────────────────────────────────────────────
 dspace_admin_email: "admin@example.com"
 dspace_admin_firstname: "DSpace"
 dspace_admin_lastname: "Administrator"
-dspace_admin_password: "DspaceAdminPass123"
+dspace_admin_password: "{{ vault_dspace_admin_password }}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Installation behaviour
@@ -42,7 +42,7 @@ dspace_force_reinstall: false
 postgresql_version: "16"          # Ubuntu 24.04 ships PG 16
 db_name: "dspace"
 db_username: "dspace"
-db_password: "ASdnlsdfio"
+db_password: "{{ vault_db_password }}"
 db_url: "jdbc:postgresql://localhost:5432/{{ db_name }}"
 
 # ─────────────────────────────────────────────────────────────────────────────
