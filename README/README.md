@@ -30,6 +30,14 @@ This repository contains an Ansible-based deployment for DSpace (backend, fronte
 
 ## Notes
 
-- Secrets should be managed with Ansible Vault (`ansible-vault edit group_vars/vault.yml`).
+- Secrets should be managed with Ansible Vault (`ansible-vault encrypt group_vars/vault.yml`).
+- The `vault_sudo_pass` variable is used for `ansible_become_pass` on the host.
 - Use `--check` for dry-run verification.
+- Rerun playbook after changed variables with `--diff` to validate idempotency.
 - This repository is intended to be executed from a control machine with SSH access to managed hosts.
+
+## Latest updates
+
+- Consolidated `vault_sudo_pass` mapping in `inventory/hosts.yml`.
+- Added `README/manual-install.md` and `README/ansible-usage.md` with specific command examples and vault flow.
+- Added root `README.md` with doc links and quick start paths.

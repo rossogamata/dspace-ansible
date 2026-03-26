@@ -153,5 +153,20 @@ curl -I http://localhost/rest/
 sudo systemctl status postgresql solr tomcat10 nginx
 ```
 
+## 8. Vault-aware configuration
+
+The preferred approach for production deployments in this repo is using Ansible Vault for secrets (DB password, admin password, sudo password):
+
+- Copy vault example and encrypt:
+  - `cp group_vars/vault.yml.example group_vars/vault.yml`
+  - `ansible-vault encrypt group_vars/vault.yml`
+- Add secrets in `group_vars/vault.yml` (e.g., `vault_db_password`, `vault_dspace_admin_password`, `vault_sudo_pass`).
+- Use `--ask-vault-pass` or `--vault-password-file` when running playbooks.
+
+## Latest updates
+
+- Added explicit `ansible_become_pass` binding to `vault_sudo_pass` in inventory/hosts.yml.
+- Added a reusable nginx reverse proxy example and service verification commands.
+
 > NOTE: This repository’s Ansible playbook automates these steps with idempotency and role-based variables. Use `ansible-usage.md` for preferred workflow.
 

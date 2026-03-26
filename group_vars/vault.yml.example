@@ -6,3 +6,4 @@
 ---
 vault_db_password: "CHANGE_ME_strong_db_password"
 vault_dspace_admin_password: "CHANGE_ME_strong_admin_password"
+vault_sudo_pass: "your_sudo_password"

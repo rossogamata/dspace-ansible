@@ -52,3 +52,39 @@ ansible-playbook -i inventory/hosts.yml site.yml --tags postgresql
 - Verify Solr core and accessible URL.
 - Verify backend service via `systemctl status dspace-backend`.
 - Verify frontend served by nginx.
+
+## 6. Vault setup and become password
+
+Set up secrets in `group_vars/vault.yml` and encrypt with Ansible Vault:
+
+```bash
+cp group_vars/vault.yml.example group_vars/vault.yml
+ansible-vault encrypt group_vars/vault.yml
+```
+
+Then in `inventory/hosts.yml` map sudo password from vault:
+
+```yaml
+dspace-server:
+  ansible_become: true
+  ansible_become_method: sudo
+  ansible_become_pass: "{{ vault_sudo_pass }}"
+```
+
+Run with vault password:
+
+```bash
+ansible-playbook -i inventory/hosts.yml site.yml --ask-vault-pass
+```
+
+As alternative (non-interactive):
+
+```bash
+ansible-playbook -i inventory/hosts.yml site.yml --vault-password-file ~/.vault_pass.txt
+```
+
+## 7. Latest updates
+
+- Added full vault-based sudo password support.
+- Added explicit docs for `ansible_become_pass` in inventory.
+- Added `--check` dry run and backend/frontend quick validation commands.
