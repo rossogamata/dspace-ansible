@@ -1,47 +1,157 @@
 # Manual Installation (DSpace)
 
-This repository mainly contains Ansible automation for a DSpace deployment. Manual installation is not the primary workflow, but these notes can help understand what gets provisioned.
+This repository uses Ansible for automation. The manual steps below capture roughly what happens under the hood and offer a fallback for debugging.
 
-## 1. Prerequisites
-
-- Linux VM (Ubuntu 22.04+ recommended)
-- `openjdk-17-jdk`
-- `postgresql` and `postgresql-contrib`
-- `nginx`
-- `tomcat` (or similar application server if used by DSpace version)
-- `curl`, `wget`, `unzip`, `git`
-
-## 2. PostgreSQL
-
-1. Create user and database:
+## 1. Prerequisites (Ubuntu 22.04+)
 
 ```bash
-sudo -u postgres createuser -P dspace_user
-sudo -u postgres createdb -O dspace_user dspace
+sudo apt update
+sudo apt install -y openjdk-17-jdk git curl wget unzip maven nginx postgresql postgresql-contrib
 ```
 
-2. Ensure `pg_hba.conf` allows local password auth, then `sudo systemctl restart postgresql`.
+Optionally install a servlet container (Tomcat 10 example):
 
-## 3. Solr
+```bash
+sudo apt install -y tomcat10
+```
 
-1. Download Solr and configure core for DSpace.
-2. Adjust `solr.in.sh` or equivalent env file for memory tuning.
+Confirm Java:
 
-## 4. DSpace application
+```bash
+java -version
+mvn -v
+```
 
-1. Clone DSpace source or download a release.
-2. Configure `${dspace.install.dir}/config/local.cfg` (or new config format) with DB/Solr endpoints.
-3. Build with Maven: `mvn package -DskipTests`.
-4. Deploy built webapp artifacts to the app server.
+## 2. PostgreSQL setup
 
-## 5. NGINX frontend
+1. Set password and database:
 
-1. Create reverse proxy rule to backend and UI ports.
-2. Enable config, test with `nginx -t`, and restart.
+```bash
+sudo -u postgres psql -c "CREATE USER dspace_user WITH PASSWORD 'dspace_password';"
+sudo -u postgres psql -c "CREATE DATABASE dspace OWNER dspace_user;"
+```
 
-## 6. Verify
+2. Edit PostgreSQL auth for local password login:
 
-- Access UI: `http://<host>/`.
-- Backend API: `http://<host>/rest/`.
+```bash
+sudo sed -i "s/^local.*all.*all.*peer/local all all md5/" /etc/postgresql/*/main/pg_hba.conf
+sudo systemctl restart postgresql
+```
 
-> NOTE: This repo encodes these steps in Ansible roles; prefer that method for repeatable, idempotent deployment.
+3. Verify DB connection:
+
+```bash
+PGPASSWORD=dspace_password psql -h localhost -U dspace_user -d dspace -c 'SELECT 1;'
+```
+
+## 3. Solr setup
+
+1. Download and install Solr:
+
+```bash
+wget https://downloads.apache.org/lucene/solr/9.9.0/solr-9.9.0.tgz
+tar xzf solr-9.9.0.tgz
+sudo bash solr-9.9.0/bin/install_solr_service.sh solr-9.9.0.tgz
+sudo systemctl enable --now solr
+```
+
+2. Create DSpace core (example `dspace`):
+
+```bash
+sudo su - solr -c "/opt/solr/bin/solr create -c dspace -n data_driven_schema_configs"
+```
+
+3. Adjust `solr.in.sh` memory settings if needed (e.g., `SOLR_JAVA_MEM="-Xms512m -Xmx1024m"`).
+
+## 4. DSpace application build & config
+
+1. Clone DSpace source:
+
+```bash
+git clone https://github.com/DSpace/DSpace.git
+cd DSpace
+git checkout main
+```
+
+2. Configure DSpace: copy template and set DB/Solr:
+
+```bash
+cp [dspace]/config/local.cfg [dspace]/config/local.cfg.bak
+# (edit the file; if using new DSpace 7, use config/dspace.cfg and curation-ui config as applicable)
+```
+
+Example values in `config/local.cfg`:
+
+```ini
+db.server=localhost
+db.name=dspace
+db.username=dspace_user
+db.password=dspace_password
+solr.server=http://localhost:8983/solr/dspace
+```
+
+3. Build:
+
+```bash
+mvn -U package -DskipTests
+```
+
+4. Install:
+
+```bash
+mkdir -p /opt/dspace
+cp -r [dspace]/dspace/target/dspace-*-release /opt/dspace
+# adapt to dspace version and target paths
+```
+
+## 5. Backend and frontend services
+
+1. Deploy backend webapp to Tomcat (or your container):
+
+```bash
+sudo cp [dspace]/dspace/target/dspace/WEB-INF/lib/*.war /var/lib/tomcat10/webapps/
+sudo systemctl restart tomcat10
+```
+
+2. Deploy frontend UI as static content under nginx or a front-end server.
+
+## 6. NGINX reverse proxy (example)
+
+Create `/etc/nginx/sites-available/dspace`:
+
+```nginx
+server {
+  listen 80;
+  server_name dspace.example.com;
+
+  location / {
+    proxy_pass http://localhost:8080/; # backend
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  location /static/ {
+    root /opt/dspace/ui; # frontend static
+  }
+}
+```
+
+Enable and test:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/dspace /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+## 7. Verify
+
+```bash
+curl -I http://localhost/
+curl -I http://localhost/rest/
+sudo systemctl status postgresql solr tomcat10 nginx
+```
+
+> NOTE: This repository’s Ansible playbook automates these steps with idempotency and role-based variables. Use `ansible-usage.md` for preferred workflow.
+

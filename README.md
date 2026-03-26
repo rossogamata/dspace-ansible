@@ -12,9 +12,9 @@ This repository contains Ansible automation for deploying DSpace components (Pos
 
 ## Documentation
 
-- `README/manual-install.md` - manual install walkthrough
-- `README/ansible-usage.md` - ansible step-by-step usage
-- `README/README.md` - expanded repo landing doc
+- [Manual installation](README/manual-install.md) - manual install walkthrough
+- [Ansible usage](README/ansible-usage.md) - ansible step-by-step usage
+- [Internal repo landing doc](README/README.md) - expanded project explanation
 
 ## Run
 
