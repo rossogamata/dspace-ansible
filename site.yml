@@ -18,6 +18,9 @@
   hosts: dspace
   become: true
 
+  vars_files:
+    - group_vars/vault.yml
+
   roles:
     - role: common
       tags: common

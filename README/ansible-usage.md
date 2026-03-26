@@ -23,6 +23,11 @@ ansible-galaxy install -r requirements.yml
 
 - Edit `inventory/hosts.yml` with target hosts and SSH connection info.
 - Copy `group_vars/vault.yml.example` to `group_vars/vault.yml` and set secrets (DB passwords, etc.).
+- Ensure `site.yml` has this `vars_files` entry:
+  ```yaml
+  vars_files:
+    - group_vars/vault.yml
+  ```
 
 ## 3. Run playbook
 
