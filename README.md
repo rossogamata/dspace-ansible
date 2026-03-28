@@ -131,7 +131,7 @@ Edit `inventory/hosts.yml` — replace the example host with your server:
 all:
   hosts:
     dspace-server:
-      ansible_host: 192.168.200.33
+      ansible_host: 111.111.111.111
       ansible_user: ubuntu
       ansible_ssh_private_key_file: ~/.ssh/id_rsa
       ansible_become: true
