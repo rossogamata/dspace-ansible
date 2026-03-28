@@ -7,15 +7,15 @@
 server {
     listen 80;
     listen [::]:80;
-    server_name {{ nginx_backend_fqdn }} {{ nginx_frontend_fqdn }};
+    server_name {{ nginx_backend_fqdn }}{% if nginx_frontend_fqdn != nginx_backend_fqdn %} {{ nginx_frontend_fqdn }}{% endif %};
     return 301 https://$host$request_uri;
 }
 
-# ── Backend: {{ nginx_backend_fqdn }} ─────────────────────────────────────────
+# ── HTTPS: backend + frontend on the same domain ─────────────────────────────
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name {{ nginx_backend_fqdn }};
+    server_name {{ nginx_backend_fqdn }}{% if nginx_frontend_fqdn != nginx_backend_fqdn %} {{ nginx_frontend_fqdn }}{% endif %};
 
 {% if nginx_use_letsencrypt %}
     ssl_certificate     /etc/letsencrypt/live/{{ nginx_backend_fqdn }}/fullchain.pem;
@@ -29,7 +29,6 @@ server {
     ssl_ciphers         HIGH:!aNULL:!MD5;
 {% endif %}
 
-    # Proxy headers for Spring Boot to reconstruct the correct request URL
     proxy_set_header Host               $host;
     proxy_set_header X-Real-IP          $remote_addr;
     proxy_set_header X-Forwarded-For    $proxy_add_x_forwarded_for;
@@ -37,10 +36,9 @@ server {
     proxy_set_header X-Forwarded-Host   $host;
     proxy_set_header X-Forwarded-Port   443;
 
-    # Increase body size for large file uploads
-    client_max_body_size 512m;
+    client_max_body_size {{ max_upload_size }};
 
-    # Proxy all traffic to the DSpace Spring Boot JAR on port {{ nginx_backend_port }}
+    # DSpace REST API
     location /server {
         proxy_pass http://127.0.0.1:{{ nginx_backend_port }}/server;
         proxy_read_timeout 300;
@@ -48,13 +46,24 @@ server {
         proxy_connect_timeout 60;
     }
 
-    # Deny direct access to Solr and other internal ports
+    # Block direct access to internal services
     location ~* ^/(solr|pgadmin)/ {
         return 403;
     }
+
+    # Angular SSR frontend (catch-all)
+    location / {
+        proxy_pass http://127.0.0.1:{{ nginx_frontend_port }}/;
+        proxy_read_timeout 120;
+        proxy_send_timeout 120;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
 }
 
-# ── Frontend: {{ nginx_frontend_fqdn }} ───────────────────────────────────────
+{% if nginx_frontend_fqdn != nginx_backend_fqdn %}
+# ── Separate frontend domain ───────────────────────────────────────────────────
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -79,9 +88,8 @@ server {
     proxy_set_header X-Forwarded-Host   $host;
     proxy_set_header X-Forwarded-Port   443;
 
-    client_max_body_size 512m;
+    client_max_body_size {{ max_upload_size }};
 
-    # Proxy to Angular SSR / PM2 on port {{ nginx_frontend_port }}
     location / {
         proxy_pass http://127.0.0.1:{{ nginx_frontend_port }}/;
         proxy_read_timeout 120;
@@ -91,3 +99,4 @@ server {
         proxy_set_header Connection "upgrade";
     }
 }
+{% endif %}

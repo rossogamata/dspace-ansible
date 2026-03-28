@@ -19,9 +19,60 @@
   ansible.builtin.file:
     path: /etc/nginx/sites-enabled/default
     state: absent
-  notify: Reload nginx
 
-- name: Template DSpace Nginx site config
+# ── Let's Encrypt (optional) ──────────────────────────────────────────────────
+# certbot --nginx validates the nginx config before running.
+# The full dspace.conf.j2 already references /etc/letsencrypt/options-ssl-nginx.conf
+# which does not exist until certbot runs for the first time.
+# Solution: deploy a plain HTTP config first, run certbot, then switch to the
+# full HTTPS config.
+
+- name: Check if Let's Encrypt certificate already exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ nginx_backend_fqdn }}/fullchain.pem"
+  register: letsencrypt_cert
+  when: nginx_use_letsencrypt
+
+- name: Deploy temporary HTTP-only config (pre-certbot)
+  ansible.builtin.template:
+    src: dspace-http.conf.j2
+    dest: /etc/nginx/sites-available/dspace.conf
+    mode: "0644"
+  when: nginx_use_letsencrypt and not letsencrypt_cert.stat.exists
+
+- name: Enable DSpace Nginx site (pre-certbot)
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/dspace.conf
+    dest: /etc/nginx/sites-enabled/dspace.conf
+    state: link
+  when: nginx_use_letsencrypt and not letsencrypt_cert.stat.exists
+
+- name: Ensure Nginx is started and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Reload Nginx to apply HTTP-only config
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  when: nginx_use_letsencrypt and not letsencrypt_cert.stat.exists
+
+- name: Obtain Let's Encrypt certificate
+  ansible.builtin.command: >
+    certbot certonly --nginx
+    -d {{ nginx_backend_fqdn }}
+    --non-interactive
+    --agree-tos
+    --email {{ nginx_letsencrypt_email }}
+  register: certbot_result
+  changed_when: "'Certificate not yet due for renewal' not in certbot_result.stdout"
+  when: nginx_use_letsencrypt and not letsencrypt_cert.stat.exists
+
+# ── Deploy full HTTPS config ───────────────────────────────────────────────────
+
+- name: Deploy full HTTPS Nginx config
   ansible.builtin.template:
     src: dspace.conf.j2
     dest: /etc/nginx/sites-available/dspace.conf
@@ -33,28 +84,8 @@
     src: /etc/nginx/sites-available/dspace.conf
     dest: /etc/nginx/sites-enabled/dspace.conf
     state: link
-  notify: Reload nginx
 
-# ── Let's Encrypt (optional) ──────────────────────────────────────────────────
-
-- name: Obtain Let's Encrypt certificate for backend
-  ansible.builtin.command: >
-    certbot --nginx
-    -d {{ nginx_backend_fqdn }}
-    -d {{ nginx_frontend_fqdn }}
-    --non-interactive
-    --agree-tos
-    --email {{ nginx_letsencrypt_email }}
-    --redirect
-  register: certbot_result
-  changed_when: "'Certificate not yet due for renewal' not in certbot_result.stdout"
-  when: nginx_use_letsencrypt
-  notify: Reload nginx
-
-# ── Ensure Nginx is running ───────────────────────────────────────────────────
-
-- name: Ensure Nginx is started and enabled
+- name: Reload Nginx to apply final config
   ansible.builtin.systemd:
     name: nginx
-    state: started
-    enabled: true
+    state: reloaded

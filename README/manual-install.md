@@ -31,14 +31,20 @@ sudo -u postgres psql -c "CREATE USER dspace_user WITH PASSWORD 'dspace_password
 sudo -u postgres psql -c "CREATE DATABASE dspace OWNER dspace_user;"
 ```
 
-2. Edit PostgreSQL auth for local password login:
+2. Install required PostgreSQL extensions:
+
+```bash
+sudo -u postgres psql -d dspace -c "CREATE EXTENSION pgcrypto;"
+```
+
+3. Edit PostgreSQL auth for local password login:
 
 ```bash
 sudo sed -i "s/^local.*all.*all.*peer/local all all md5/" /etc/postgresql/*/main/pg_hba.conf
 sudo systemctl restart postgresql
 ```
 
-3. Verify DB connection:
+4. Verify DB connection:
 
 ```bash
 PGPASSWORD=dspace_password psql -h localhost -U dspace_user -d dspace -c 'SELECT 1;'

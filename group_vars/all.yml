@@ -14,8 +14,8 @@ dspace_ui_dir: "/opt/dspace-ui"             # Angular production deployment
 # ─────────────────────────────────────────────────────────────────────────────
 # Public URLs  (no trailing slash; use real FQDNs in production)
 # ─────────────────────────────────────────────────────────────────────────────
-dspace_server_url: "https://api.example.com/server"
-dspace_ui_url: "https://www.example.com"
+dspace_server_url: "https://dspace.example.com/server"
+dspace_ui_url: "https://dspace.example.com"
 dspace_name: "DSpace at MITIT"
 
 # Internal URL the Angular SSR process uses to reach the backend
@@ -35,6 +35,7 @@ dspace_admin_password: "{{ vault_dspace_admin_password }}"
 # ─────────────────────────────────────────────────────────────────────────────
 # Set to true to force a full Maven rebuild + ant reinstall even if already done
 dspace_force_reinstall: false
+maven_version: "3.9.14"       # apt ships 3.6 which is too old for DSpace 9
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Database (PostgreSQL)
@@ -70,11 +71,11 @@ dspace_ui_pm2_instances: "max"   # number of Node.js cluster workers
 # ─────────────────────────────────────────────────────────────────────────────
 # Nginx / TLS
 # ─────────────────────────────────────────────────────────────────────────────
-nginx_backend_fqdn: "api.example.com"     # backend domain (for /server)
-nginx_frontend_fqdn: "www.example.com"   # frontend domain
+nginx_backend_fqdn: "dspace.example.com"     # backend domain (for /server)
+nginx_frontend_fqdn: "dspace.example.com"   # frontend domain
 
 # Set to true to obtain a Let's Encrypt certificate automatically via certbot
-nginx_use_letsencrypt: false
+nginx_use_letsencrypt: true
 nginx_letsencrypt_email: "admin@example.com"
 
 # Used when nginx_use_letsencrypt is false (supply your own certs)

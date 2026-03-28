@@ -35,15 +35,27 @@
 
 # ── Production build ──────────────────────────────────────────────────────────
 
-- name: Build dspace-angular for production (this can take 10–20 minutes)
+- name: Build dspace-angular browser bundle for production (this can take 10–20 minutes)
   ansible.builtin.command:
-    cmd: npm run build:prod
+    cmd: node --max-old-space-size=4096 ./node_modules/.bin/ng build --configuration production
     chdir: "{{ dspace_angular_src_dir }}"
   become_user: "{{ dspace_frontend_system_user }}"
   environment:
     NODE_ENV: production
   when: not dspace_ui_check.stat.exists or dspace_force_reinstall
   async: 2400
+  poll: 30
+  changed_when: true
+
+- name: Build dspace-angular SSR server bundle for production
+  ansible.builtin.command:
+    cmd: node --max-old-space-size=4096 ./node_modules/.bin/ng run dspace-angular:server:production
+    chdir: "{{ dspace_angular_src_dir }}"
+  become_user: "{{ dspace_frontend_system_user }}"
+  environment:
+    NODE_ENV: production
+  when: not dspace_ui_check.stat.exists or dspace_force_reinstall
+  async: 3600
   poll: 30
   changed_when: true
 
@@ -89,6 +101,16 @@
     group: "{{ dspace_frontend_system_user }}"
     mode: "0644"
   notify: Restart dspace frontend
+
+# ── Log directory ─────────────────────────────────────────────────────────────
+
+- name: Create /var/log/dspace for PM2 logs
+  ansible.builtin.file:
+    path: /var/log/dspace
+    state: directory
+    owner: "{{ dspace_frontend_system_user }}"
+    group: "{{ dspace_frontend_system_user }}"
+    mode: "0755"
 
 # ── Start the frontend with PM2 ───────────────────────────────────────────────
 

@@ -11,6 +11,6 @@ SOLR_HEAP="512m"
 # Data directory (managed by install_solr_service.sh)
 SOLR_HOME="{{ solr_data_dir }}"
 
-# Log directory
+# Log directory (matches what install_solr_service.sh expects)
 LOG4J_PROPS="/var/solr/log4j2.xml"
 SOLR_LOGS_DIR="/var/solr/logs"

@@ -39,6 +39,27 @@
   # Always re-template so config changes are picked up on re-runs
   notify: Restart dspace backend
 
+# Spring Boot 3.5 does not recognise .cfg as a valid config format.
+# local.properties is identical in content but uses the natively-supported
+# .properties extension so Spring Boot can load it without a custom loader.
+- name: Template local.properties into source tree (Spring Boot compatible copy)
+  ansible.builtin.template:
+    src: local.cfg.j2
+    dest: "{{ dspace_src_dir }}/dspace/config/local.properties"
+    owner: "{{ dspace_system_user }}"
+    group: "{{ dspace_system_group }}"
+    mode: "0640"
+  notify: Restart dspace backend
+
+- name: Template local.properties into deploy dir (keeps it in sync after ant install)
+  ansible.builtin.template:
+    src: local.cfg.j2
+    dest: "{{ dspace_dir }}/config/local.properties"
+    owner: "{{ dspace_system_user }}"
+    group: "{{ dspace_system_group }}"
+    mode: "0640"
+  notify: Restart dspace backend
+
 # ── Maven build ───────────────────────────────────────────────────────────────
 
 - name: Check if DSpace installer already exists
@@ -102,12 +123,8 @@
     owner: solr
     group: solr
   loop: "{{ solr_cores }}"
-  notify: Restart solr
 
-- name: Flush handlers (restart Solr before creating cores)
-  ansible.builtin.meta: flush_handlers
-
-- name: Wait for Solr to be ready after restart
+- name: Wait for Solr to be ready (port 8983)
   ansible.builtin.wait_for:
     host: localhost
     port: 8983

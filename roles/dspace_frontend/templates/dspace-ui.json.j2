@@ -8,7 +8,8 @@
       "exec_mode": "cluster",
       "env": {
         "NODE_ENV": "production",
-        "DSPACE_UI_PORT": "{{ dspace_ui_port }}"
+        "DSPACE_UI_PORT": "{{ dspace_ui_port }}",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
       "log_date_format": "YYYY-MM-DD HH:mm:ss",
       "error_file": "/var/log/dspace/dspace-ui-error.log",

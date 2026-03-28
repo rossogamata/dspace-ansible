@@ -45,7 +45,7 @@
 
 - name: Create Solr logs directory
   ansible.builtin.file:
-    path: "{{ solr_data_dir }}/logs"
+    path: "/var/solr/logs"
     state: directory
     owner: solr
     group: solr
@@ -65,11 +65,21 @@
     mode: "0640"
   notify: Restart solr
 
+- name: Check if Solr is already running on port 8983
+  ansible.builtin.wait_for:
+    host: localhost
+    port: 8983
+    timeout: 1
+    state: present
+  register: solr_port_check
+  ignore_errors: true
+
 - name: Ensure Solr is started and enabled
   ansible.builtin.systemd:
     name: solr
     state: started
     enabled: true
+  when: solr_port_check.failed
 
 - name: Wait for Solr to be ready (port 8983)
   ansible.builtin.wait_for:

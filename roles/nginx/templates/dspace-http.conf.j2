@@ -1,0 +1,17 @@
+# Managed by Ansible — temporary HTTP-only config used during initial certbot run.
+# Replaced by dspace.conf.j2 after the certificate is obtained.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ nginx_backend_fqdn }} {{ nginx_frontend_fqdn }};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 200 'DSpace — certificate pending';
+        add_header Content-Type text/plain;
+    }
+}

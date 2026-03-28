@@ -1,4 +1,14 @@
 ---
+# The DSpace frontend (Angular SSR) makes server-side HTTPS requests to the
+# public FQDN. If the domain resolves externally to a different host, those
+# requests fail. Pin it in /etc/hosts so SSR always reaches the local nginx.
+- name: Ensure DSpace FQDN resolves to localhost on this server
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '.*{{ nginx_frontend_fqdn | default(dspace_ui_url | regex_replace("https?://", "")) }}$'
+    line: "127.0.0.1 {{ nginx_frontend_fqdn | default(dspace_ui_url | regex_replace('https?://', '')) }}"
+    state: present
+
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: true
@@ -16,7 +26,6 @@
       - gnupg
       - lsb-release
       - ant
-      - maven
       - openjdk-17-jdk
       - python3-psycopg2    # required by community.postgresql modules
     state: present
@@ -28,6 +37,45 @@
       export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
       export PATH=$JAVA_HOME/bin:$PATH
     mode: "0644"
+
+# ── Maven 3.9 (apt ships 3.6 which is too old for DSpace 9) ──────────────────
+
+- name: Download Apache Maven {{ maven_version }}
+  ansible.builtin.get_url:
+    url: "https://downloads.apache.org/maven/maven-3/{{ maven_version }}/binaries/apache-maven-{{ maven_version }}-bin.tar.gz"
+    dest: "/tmp/apache-maven-{{ maven_version }}-bin.tar.gz"
+    mode: "0644"
+
+- name: Extract Maven to /opt
+  ansible.builtin.unarchive:
+    src: "/tmp/apache-maven-{{ maven_version }}-bin.tar.gz"
+    dest: /opt
+    remote_src: true
+    creates: "/opt/apache-maven-{{ maven_version }}"
+
+- name: Symlink /opt/maven → /opt/apache-maven-{{ maven_version }}
+  ansible.builtin.file:
+    src: "/opt/apache-maven-{{ maven_version }}"
+    dest: /opt/maven
+    state: link
+    force: true
+
+- name: Set Maven on system PATH
+  ansible.builtin.copy:
+    dest: /etc/profile.d/maven.sh
+    content: |
+      export M2_HOME=/opt/maven
+      export PATH=$M2_HOME/bin:$PATH
+    mode: "0644"
+
+- name: Symlink mvn into /usr/local/bin
+  ansible.builtin.file:
+    src: /opt/maven/bin/mvn
+    dest: /usr/local/bin/mvn
+    state: link
+    force: true
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 - name: Create dspace system user and group
   ansible.builtin.user:

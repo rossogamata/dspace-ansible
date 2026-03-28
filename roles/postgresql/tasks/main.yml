@@ -1,9 +1,28 @@
 ---
+- name: Install prerequisite packages for PGDG repo
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - curl
+    state: present
+    update_cache: true
+
+- name: Add PostgreSQL apt signing key
+  ansible.builtin.apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: Add PostgreSQL apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+    filename: pgdg
+    update_cache: true
+
 - name: Install PostgreSQL {{ postgresql_version }} and contrib
   ansible.builtin.apt:
     name:
       - "postgresql-{{ postgresql_version }}"
-      - "postgresql-contrib-{{ postgresql_version }}"
     state: present
 
 - name: Ensure PostgreSQL is started and enabled
@@ -46,5 +65,12 @@
     name: "{{ db_name }}"
     owner: "{{ db_username }}"
     encoding: UTF-8
+    state: present
+  become_user: postgres
+
+- name: Install pgcrypto extension in DSpace database
+  community.postgresql.postgresql_ext:
+    name: pgcrypto
+    db: "{{ db_name }}"
     state: present
   become_user: postgres

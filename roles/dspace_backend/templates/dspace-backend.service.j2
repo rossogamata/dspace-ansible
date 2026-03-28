@@ -12,13 +12,21 @@ Group={{ dspace_system_group }}
 WorkingDirectory={{ dspace_dir }}
 
 ExecStart=/usr/bin/java \
+  -Ddspace.dir={{ dspace_dir }} \
+  -Ddspace.server.url={{ dspace_server_url }} \
+  -Ddspace.ui.url={{ dspace_ui_url }} \
+  "-Ddspace.name={{ dspace_name }}" \
+  -Drest.cors.allowed-origins={{ dspace_ui_url }} \
+  -Dsolr.server={{ solr_url }} \
+  -Dspring.servlet.multipart.max-file-size={{ max_upload_size }} \
+  -Dspring.servlet.multipart.max-request-size={{ max_upload_size }} \
   -jar {{ dspace_dir }}/webapps/server-boot.jar \
   --dspace.dir={{ dspace_dir }} \
-  --spring.config.location=file://{{ dspace_dir }}/config/local.cfg \
+  --spring.config.import=file://{{ dspace_dir }}/config/local.properties \
   --logging.config=file://{{ dspace_dir }}/config/log4j2-container.xml
 
 # Allow the service time to start up (Maven Spring Boot can be slow)
-TimeoutStartSec=120
+TimeoutStartSec=180
 TimeoutStopSec=30
 
 # Restart on failure with a 10-second back-off
